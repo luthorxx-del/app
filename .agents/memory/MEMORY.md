@@ -1,0 +1,1 @@
+- [OpenAPI and workspace Zod](zod-openapi-compat.md) — keep generated numeric schemas compatible with the workspace's current Zod major until the catalog is upgraded.

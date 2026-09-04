@@ -10,6 +10,16 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: sports
+    description: Sport catalog operations
+  - name: matches
+    description: Match schedules and scorecards
+  - name: players
+    description: Player profiles
+  - name: tournaments
+    description: Tournament profiles
+  - name: search
+    description: Cross-entity search
 paths:
   /healthz:
     get:
@@ -24,7 +34,172 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /sports:
+    get:
+      operationId: listSports
+      tags: [sports]
+      summary: List supported sports
+      responses:
+        "200":
+          description: Supported sports
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Sport"
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [matches]
+      summary: Get the dashboard match feed
+      parameters:
+        - $ref: "#/components/parameters/SportId"
+      responses:
+        "200":
+          description: Dashboard feed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+  /matches:
+    get:
+      operationId: listMatches
+      tags: [matches]
+      summary: List matches with optional filters
+      parameters:
+        - $ref: "#/components/parameters/SportId"
+        - $ref: "#/components/parameters/TournamentId"
+        - $ref: "#/components/parameters/PlayerId"
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/MatchStatus"
+      responses:
+        "200":
+          description: Matches
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Match"
+  /matches/{id}:
+    get:
+      operationId: getMatch
+      tags: [matches]
+      summary: Get a match scorecard
+      parameters:
+        - $ref: "#/components/parameters/MatchId"
+      responses:
+        "200":
+          description: Match scorecard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /players/{id}:
+    get:
+      operationId: getPlayer
+      tags: [players]
+      summary: Get a player profile
+      parameters:
+        - $ref: "#/components/parameters/PlayerPathId"
+      responses:
+        "200":
+          description: Player profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /tournaments/{id}:
+    get:
+      operationId: getTournament
+      tags: [tournaments]
+      summary: Get a tournament profile
+      parameters:
+        - $ref: "#/components/parameters/TournamentPathId"
+      responses:
+        "200":
+          description: Tournament profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TournamentDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /search:
+    get:
+      operationId: search
+      tags: [search]
+      summary: Search players, tournaments, and matches
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+        - $ref: "#/components/parameters/SportId"
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResults"
 components:
+  parameters:
+    SportId:
+      name: sportId
+      in: query
+      schema:
+        type: number
+        minimum: 1
+    TournamentId:
+      name: tournamentId
+      in: query
+      schema:
+        type: number
+        minimum: 1
+    PlayerId:
+      name: playerId
+      in: query
+      schema:
+        type: number
+        minimum: 1
+    MatchId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: number
+        minimum: 1
+    PlayerPathId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: number
+        minimum: 1
+    TournamentPathId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: number
+        minimum: 1
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +208,146 @@ components:
           type: string
       required:
         - status
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+    MatchStatus:
+      type: string
+      enum: [upcoming, live, completed]
+    Sport:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: number }
+        name: { type: string }
+    Player:
+      type: object
+      required: [id, sportId, name, country]
+      properties:
+        id: { type: number }
+        sportId: { type: number }
+        name: { type: string }
+        country: { type: string }
+        currentRanking:
+          type: [number, "null"]
+    Tournament:
+      type: object
+      required: [id, sportId, name, region, surface, category, season]
+      properties:
+        id: { type: number }
+        sportId: { type: number }
+        name: { type: string }
+        region: { type: string }
+        surface: { type: string }
+        category: { type: string }
+        season: { type: number }
+    MatchSet:
+      type: object
+      required: [id, matchId, setNumber, playerAGames, playerBGames]
+      properties:
+        id: { type: number }
+        matchId: { type: number }
+        setNumber: { type: number }
+        playerAGames: { type: number }
+        playerBGames: { type: number }
+    Match:
+      type: object
+      required:
+        [id, sportId, tournamentId, tournamentName, playerA, playerB, date, status, winnerId, resultSummary]
+      properties:
+        id: { type: number }
+        sportId: { type: number }
+        tournamentId: { type: number }
+        tournamentName: { type: string }
+        playerA:
+          $ref: "#/components/schemas/Player"
+        playerB:
+          $ref: "#/components/schemas/Player"
+        date: { type: string, format: date-time }
+        status:
+          $ref: "#/components/schemas/MatchStatus"
+        winnerId:
+          type: [number, "null"]
+        resultSummary:
+          type: [string, "null"]
+        sets:
+          type: array
+          items:
+            $ref: "#/components/schemas/MatchSet"
+    MatchDetail:
+      allOf:
+        - $ref: "#/components/schemas/Match"
+        - type: object
+          required: [tournament]
+          properties:
+            tournament:
+              $ref: "#/components/schemas/Tournament"
+    Dashboard:
+      type: object
+      required: [sport, today, live, upcoming, completed]
+      properties:
+        sport:
+          $ref: "#/components/schemas/Sport"
+        today:
+          type: array
+          items:
+            $ref: "#/components/schemas/Match"
+        live:
+          type: array
+          items:
+            $ref: "#/components/schemas/Match"
+        upcoming:
+          type: array
+          items:
+            $ref: "#/components/schemas/Match"
+        completed:
+          type: array
+          items:
+            $ref: "#/components/schemas/Match"
+    PlayerDetail:
+      type: object
+      required: [player, recentMatches, wins, losses, winPercentage]
+      properties:
+        player:
+          $ref: "#/components/schemas/Player"
+        recentMatches:
+          type: array
+          items:
+            $ref: "#/components/schemas/Match"
+        wins: { type: number }
+        losses: { type: number }
+        winPercentage: { type: number }
+    TournamentDetail:
+      type: object
+      required: [tournament, upcomingMatches, completedMatches]
+      properties:
+        tournament:
+          $ref: "#/components/schemas/Tournament"
+        upcomingMatches:
+          type: array
+          items:
+            $ref: "#/components/schemas/Match"
+        completedMatches:
+          type: array
+          items:
+            $ref: "#/components/schemas/Match"
+    SearchResults:
+      type: object
+      required: [players, tournaments, matches]
+      properties:
+        players:
+          type: array
+          items:
+            $ref: "#/components/schemas/Player"
+        tournaments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tournament"
+        matches:
+          type: array
+          items:
+            $ref: "#/components/schemas/Match"
 

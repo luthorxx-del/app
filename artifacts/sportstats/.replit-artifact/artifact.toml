@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "SportStats"
+description = "A mobile-first sports statistics app starting with tennis, showing matches, players, tournaments, scores, and searchable results on a dark dashboard with a sport-agnostic architecture for future sports."
+version = "1.0.0"
+id = "artifacts/sportstats"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25051
+
+[services.development]
+run = "pnpm --filter @workspace/sportstats run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/sportstats", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/sportstats/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25051"
+BASE_PATH = "/"
