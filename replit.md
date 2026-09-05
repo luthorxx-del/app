@@ -1,10 +1,10 @@
-# [Project name]
+# SportStats
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+SportStats is a mobile-first Tennis statistics platform with a sport-agnostic data foundation.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/api-server run dev` — run the API server on the configured `PORT`
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
@@ -22,23 +22,35 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `lib/db/src/schema/` — PostgreSQL/Drizzle source of truth for sports, players, seasons, tournaments, matches, results, sets, statistics, and rankings
+- `lib/api-spec/openapi.yaml` — source of truth for the REST contract
+- `artifacts/api-server/src/routes/sports.ts` — validated sports API routes and dynamic statistics/H2H calculations
+- `artifacts/api-server/src/lib/seed.ts` — small idempotent demo dataset only
+- `artifacts/sportstats/src/` — React/Vite dashboard and profile pages
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Internal identity columns remain stable while `source` + `externalId` provide import-safe provider identity and duplicate protection.
+- Seasons, ranking snapshots, match results, and match statistics are separate entities so historical imports do not overwrite current profile fields.
+- H2H is derived from completed match rows with a strict `match.date < target.date` boundary; it is not stored as a stale aggregate.
+- Existing `date`, `winnerId`, `resultSummary`, and `season` fields remain for V1 API/UI compatibility while richer import relationships are added alongside them.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Dashboard with live, upcoming, today, and recent completed Tennis matches
+- Match scorecards with set breakdowns and pre-match H2H context
+- Player and tournament profiles
+- Search across players, tournaments, and matches
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Keep the demo dataset small and optimize the architecture for real sports-data imports.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- After editing `lib/api-spec/openapi.yaml`, run API code generation before typechecking.
+- Imported entities should always provide a stable `(source, externalId)` pair; the schema protects that pair with unique indexes.
+- Use `pnpm --filter @workspace/db run push` for development schema changes; production schema changes are applied through Publish.
 
 ## Pointers
 

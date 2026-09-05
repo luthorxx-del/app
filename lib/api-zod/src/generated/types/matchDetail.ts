@@ -5,9 +5,11 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { HeadToHead } from './headToHead';
 import type { Match } from './match';
 import type { Tournament } from './tournament';
 
 export type MatchDetail = Match & {
   tournament: Tournament;
+  headToHead: HeadToHead;
 };

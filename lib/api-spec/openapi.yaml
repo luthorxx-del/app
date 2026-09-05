@@ -100,6 +100,22 @@ paths:
                 $ref: "#/components/schemas/MatchDetail"
         "404":
           $ref: "#/components/responses/NotFound"
+  /matches/{id}/h2h:
+    get:
+      operationId: getMatchH2h
+      tags: [matches]
+      summary: Get dynamic pre-match head-to-head statistics
+      parameters:
+        - $ref: "#/components/parameters/MatchId"
+      responses:
+        "200":
+          description: Head-to-head statistics and recent meetings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HeadToHead"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /players/{id}:
     get:
       operationId: getPlayer
@@ -281,10 +297,57 @@ components:
       allOf:
         - $ref: "#/components/schemas/Match"
         - type: object
-          required: [tournament]
+          required: [tournament, headToHead]
           properties:
             tournament:
               $ref: "#/components/schemas/Tournament"
+            headToHead:
+              $ref: "#/components/schemas/HeadToHead"
+    HeadToHead:
+      type: object
+      required:
+        [totalMeetings, playerAWins, playerBWins, playerAWinPercentage, playerBWinPercentage, matchesBeforeScheduledTime, surfaceBreakdown, recentMeetings]
+      properties:
+        totalMeetings: { type: number }
+        playerAWins: { type: number }
+        playerBWins: { type: number }
+        playerAWinPercentage: { type: number }
+        playerBWinPercentage: { type: number }
+        matchesBeforeScheduledTime: { type: number }
+        surfaceBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/HeadToHeadSurface"
+        recentMeetings:
+          type: array
+          items:
+            $ref: "#/components/schemas/HeadToHeadMatch"
+    HeadToHeadSurface:
+      type: object
+      required: [surface, totalMeetings, playerAWins, playerBWins, playerAWinPercentage, playerBWinPercentage]
+      properties:
+        surface: { type: string }
+        totalMeetings: { type: number }
+        playerAWins: { type: number }
+        playerBWins: { type: number }
+        playerAWinPercentage: { type: number }
+        playerBWinPercentage: { type: number }
+    HeadToHeadMatch:
+      type: object
+      required: [id, date, tournamentName, surface, playerA, playerB, winnerId, resultSummary]
+      properties:
+        id: { type: number }
+        date: { type: string, format: date-time }
+        tournamentName: { type: string }
+        surface: { type: string }
+        playerA:
+          $ref: "#/components/schemas/Player"
+        playerB:
+          $ref: "#/components/schemas/Player"
+        winnerId:
+          type: [number, "null"]
+        resultSummary:
+          type: [string, "null"]
     Dashboard:
       type: object
       required: [sport, today, live, upcoming, completed]

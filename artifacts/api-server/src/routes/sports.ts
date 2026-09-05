@@ -1,4 +1,4 @@
-import { and, asc, eq, ilike, inArray, or, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, lt, or, sql, type SQL } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import {
   GetDashboardQueryParams,
@@ -108,6 +108,169 @@ async function fetchMatches(filters: MatchFilters = {}) {
   }));
 }
 
+async function fetchMatchById(id: number) {
+  const [row] = await db
+    .select(baseMatchFields)
+    .from(matchesTable)
+    .innerJoin(
+      tournamentsTable,
+      eq(matchesTable.tournamentId, tournamentsTable.id),
+    )
+    .innerJoin(playerAAlias, eq(matchesTable.playerAId, playerAAlias.id))
+    .innerJoin(playerBAlias, eq(matchesTable.playerBId, playerBAlias.id))
+    .where(eq(matchesTable.id, id))
+    .limit(1);
+
+  if (!row) return undefined;
+
+  const sets = await db
+    .select()
+    .from(matchSetsTable)
+    .where(eq(matchSetsTable.matchId, row.id))
+    .orderBy(asc(matchSetsTable.setNumber));
+
+  return { ...row, sets };
+}
+
+type H2HTarget = {
+  sportId: number;
+  playerAId: number;
+  playerBId: number;
+  date: Date;
+};
+
+function winPercentage(wins: number, total: number) {
+  return total ? Math.round((wins / total) * 1000) / 10 : 0;
+}
+
+function h2hPairCondition(match: H2HTarget) {
+  return or(
+    and(
+      eq(matchesTable.playerAId, match.playerAId),
+      eq(matchesTable.playerBId, match.playerBId),
+    ),
+    and(
+      eq(matchesTable.playerAId, match.playerBId),
+      eq(matchesTable.playerBId, match.playerAId),
+    ),
+  )!;
+}
+
+async function calculateHeadToHead(match: H2HTarget) {
+  const priorMatchFilter = and(
+    eq(matchesTable.sportId, match.sportId),
+    eq(matchesTable.status, "completed"),
+    lt(matchesTable.date, match.date),
+    h2hPairCondition(match),
+  );
+
+  const surfaceRows = await db
+    .select({
+      surface: tournamentsTable.surface,
+      totalMeetings: sql<number>`count(*)::int`,
+      playerAWins: sql<number>`count(*) filter (where ${matchesTable.winnerId} = ${match.playerAId})::int`,
+      playerBWins: sql<number>`count(*) filter (where ${matchesTable.winnerId} = ${match.playerBId})::int`,
+    })
+    .from(matchesTable)
+    .innerJoin(
+      tournamentsTable,
+      eq(matchesTable.tournamentId, tournamentsTable.id),
+    )
+    .where(priorMatchFilter)
+    .groupBy(tournamentsTable.surface)
+    .orderBy(asc(tournamentsTable.surface));
+
+  const recentMeetings = await db
+    .select({
+      id: matchesTable.id,
+      date: matchesTable.date,
+      tournamentName: tournamentsTable.name,
+      surface: tournamentsTable.surface,
+      playerAId: matchesTable.playerAId,
+      playerBId: matchesTable.playerBId,
+      winnerId: matchesTable.winnerId,
+      resultSummary: matchesTable.resultSummary,
+      playerA: {
+        id: playerAAlias.id,
+        sportId: playerAAlias.sportId,
+        name: playerAAlias.name,
+        country: playerAAlias.country,
+        currentRanking: playerAAlias.currentRanking,
+      },
+      playerB: {
+        id: playerBAlias.id,
+        sportId: playerBAlias.sportId,
+        name: playerBAlias.name,
+        country: playerBAlias.country,
+        currentRanking: playerBAlias.currentRanking,
+      },
+    })
+    .from(matchesTable)
+    .innerJoin(
+      tournamentsTable,
+      eq(matchesTable.tournamentId, tournamentsTable.id),
+    )
+    .innerJoin(playerAAlias, eq(matchesTable.playerAId, playerAAlias.id))
+    .innerJoin(playerBAlias, eq(matchesTable.playerBId, playerBAlias.id))
+    .where(priorMatchFilter)
+    .orderBy(desc(matchesTable.date), desc(matchesTable.id))
+    .limit(10);
+
+  const totalMeetings = surfaceRows.reduce(
+    (total, surface) => total + surface.totalMeetings,
+    0,
+  );
+  const playerAWins = surfaceRows.reduce(
+    (total, surface) => total + surface.playerAWins,
+    0,
+  );
+  const playerBWins = surfaceRows.reduce(
+    (total, surface) => total + surface.playerBWins,
+    0,
+  );
+
+  return {
+    totalMeetings,
+    matchesBeforeScheduledTime: totalMeetings,
+    playerAWins,
+    playerBWins,
+    playerAWinPercentage: winPercentage(playerAWins, totalMeetings),
+    playerBWinPercentage: winPercentage(playerBWins, totalMeetings),
+    surfaceBreakdown: surfaceRows.map((surface) => ({
+      ...surface,
+      playerAWinPercentage: winPercentage(
+        surface.playerAWins,
+        surface.totalMeetings,
+      ),
+      playerBWinPercentage: winPercentage(
+        surface.playerBWins,
+        surface.totalMeetings,
+      ),
+    })),
+    recentMeetings,
+  };
+}
+
+async function getMatchDetail(id: number) {
+  const match = await fetchMatchById(id);
+  if (!match) return undefined;
+
+  const [tournament] = await db
+    .select()
+    .from(tournamentsTable)
+    .where(eq(tournamentsTable.id, match.tournamentId));
+  if (!tournament) return undefined;
+
+  const headToHead = await calculateHeadToHead({
+    sportId: match.sportId,
+    playerAId: match.playerA.id,
+    playerBId: match.playerB.id,
+    date: match.date,
+  });
+
+  return { ...match, tournament, headToHead };
+}
+
 function dayBounds() {
   const now = new Date();
   const start = new Date(now);
@@ -182,24 +345,29 @@ router.get("/matches/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const [match] = await fetchMatches({}).then((matches) =>
-    matches.filter((item) => item.id === parsed.data.id),
-  );
-  if (!match) {
+  const detail = await getMatchDetail(parsed.data.id);
+  if (!detail) {
     res.status(404).json({ error: "Match not found" });
     return;
   }
 
-  const [tournament] = await db
-    .select()
-    .from(tournamentsTable)
-    .where(eq(tournamentsTable.id, match.tournamentId));
-  if (!tournament) {
-    res.status(404).json({ error: "Tournament not found" });
+  res.json(GetMatchResponse.parse(detail));
+});
+
+router.get("/matches/:id/h2h", async (req, res): Promise<void> => {
+  const parsed = GetMatchParams.safeParse(req.params);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
     return;
   }
 
-  res.json(GetMatchResponse.parse({ ...match, tournament }));
+  const detail = await getMatchDetail(parsed.data.id);
+  if (!detail) {
+    res.status(404).json({ error: "Match not found" });
+    return;
+  }
+
+  res.json(detail.headToHead);
 });
 
 router.get("/players/:id", async (req, res): Promise<void> => {

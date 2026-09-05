@@ -70,8 +70,42 @@ export interface Match {
   sets?: MatchSet[];
 }
 
+export interface HeadToHeadSurface {
+  surface: string;
+  totalMeetings: number;
+  playerAWins: number;
+  playerBWins: number;
+  playerAWinPercentage: number;
+  playerBWinPercentage: number;
+}
+
+export interface HeadToHeadMatch {
+  id: number;
+  date: string;
+  tournamentName: string;
+  surface: string;
+  playerA: Player;
+  playerB: Player;
+  /** @nullable */
+  winnerId: number | null;
+  /** @nullable */
+  resultSummary: string | null;
+}
+
+export interface HeadToHead {
+  totalMeetings: number;
+  playerAWins: number;
+  playerBWins: number;
+  playerAWinPercentage: number;
+  playerBWinPercentage: number;
+  matchesBeforeScheduledTime: number;
+  surfaceBreakdown: HeadToHeadSurface[];
+  recentMeetings: HeadToHeadMatch[];
+}
+
 export type MatchDetail = Match & {
   tournament: Tournament;
+  headToHead: HeadToHead;
 };
 
 export interface Dashboard {

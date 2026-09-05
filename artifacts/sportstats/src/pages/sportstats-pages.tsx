@@ -12,6 +12,7 @@ import {
   useListSports,
   useListMatches,
   useSearch,
+  type HeadToHead,
 } from '@workspace/api-client-react';
 import {
   formatDate,
@@ -79,11 +80,98 @@ export function MatchPage() {
           <div className="mb-8 flex flex-col gap-3 border-b border-border pb-6 sm:flex-row sm:items-start sm:justify-between"><div><Link href={`/tournaments/${data.tournament.id}`} className="text-sm font-bold text-primary hover:text-foreground" data-testid={`link-match-tournament-${data.tournament.id}`}>{data.tournament.name}</Link><p className="mt-1 text-xs text-muted-foreground">{data.tournament.region} · {data.tournament.surface} · {data.tournament.category}</p></div><div className="flex items-center gap-3"><StatusPill status={data.status} /><span className="text-xs text-muted-foreground">{formatDate(data.date)}</span></div></div>
           <div className="grid gap-8 sm:grid-cols-[1fr_auto_1fr] sm:items-center"><div className="text-center sm:text-right"><Link href={`/players/${data.playerA.id}`} className="font-extrabold tracking-[-.04em] hover:text-primary" data-testid={`link-scorecard-player-${data.playerA.id}`}>{data.playerA.name}</Link><p className="mt-1 text-xs text-muted-foreground">{data.playerA.country} · #{data.playerA.currentRanking ?? '—'}</p></div><div className="text-center"><span className="mono-label text-muted-foreground">{data.status === 'completed' ? 'Final score' : data.status === 'live' ? 'Current score' : 'First serve'}</span><div className="mt-2 text-4xl font-extrabold tracking-[-.08em] text-primary">{data.status === 'upcoming' ? formatDate(data.date, 'time') : `${data.resultSummary ?? 'In play'}`}</div></div><div className="text-center sm:text-left"><Link href={`/players/${data.playerB.id}`} className="font-extrabold tracking-[-.04em] hover:text-primary" data-testid={`link-scorecard-player-${data.playerB.id}`}>{data.playerB.name}</Link><p className="mt-1 text-xs text-muted-foreground">{data.playerB.country} · #{data.playerB.currentRanking ?? '—'}</p></div></div>
         </div>
-        <div className="rounded-3xl border border-card-border bg-card p-5 sm:p-8"><div className="mb-5 flex items-center justify-between"><div><p className="mono-label text-primary">Match breakdown</p><h2 className="mt-1 text-xl font-extrabold tracking-[-.04em]">Set by set</h2></div><BarChart3 size={20} className="text-muted-foreground" /></div><div className="rounded-2xl bg-muted/45 p-4 sm:p-6"><ScoreDisplay match={data} /></div>{data.winnerId && <div className="mt-5 flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm"><Trophy size={16} className="text-primary" /><span>Winner</span><strong>{data.winnerId === data.playerA.id ? data.playerA.name : data.playerB.name}</strong></div>}</div>
+         <div className="rounded-3xl border border-card-border bg-card p-5 sm:p-8"><div className="mb-5 flex items-center justify-between"><div><p className="mono-label text-primary">Match breakdown</p><h2 className="mt-1 text-xl font-extrabold tracking-[-.04em]">Set by set</h2></div><BarChart3 size={20} className="text-muted-foreground" /></div><div className="rounded-2xl bg-muted/45 p-4 sm:p-6"><ScoreDisplay match={data} /></div>{data.winnerId && <div className="mt-5 flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm"><Trophy size={16} className="text-primary" /><span>Winner</span><strong>{data.winnerId === data.playerA.id ? data.playerA.name : data.playerB.name}</strong></div>}</div>
+         <HeadToHeadSection data={data.headToHead} playerAName={data.playerA.name} playerBName={data.playerB.name} />
         <div className="grid gap-4 sm:grid-cols-3"><InfoStat icon={<CalendarDays size={16} />} label="Date" value={formatDate(data.date, 'date')} /><InfoStat icon={<Clock3 size={16} />} label="Start time" value={formatDate(data.date, 'time')} /><InfoStat icon={<Layers3 size={16} />} label="Surface" value={data.tournament.surface} /></div>
       </div>}
     </QueryState>
   </PageFrame>;
+}
+
+function HeadToHeadSection({
+  data,
+  playerAName,
+  playerBName,
+}: {
+  data: HeadToHead;
+  playerAName: string;
+  playerBName: string;
+}) {
+  return (
+    <section className="rounded-3xl border border-primary/20 bg-[radial-gradient(circle_at_90%_10%,hsl(var(--primary)/.1),transparent_24rem),hsl(var(--card))] p-5 sm:p-8" data-testid="section-head-to-head">
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+        <div>
+          <p className="mono-label text-primary">Head-to-head</p>
+          <h2 className="mt-1 text-xl font-extrabold tracking-[-.04em]">{playerAName} vs {playerBName}</h2>
+          <p className="mt-1 text-xs text-muted-foreground">Completed meetings before this match only</p>
+        </div>
+        {data.totalMeetings > 0 && (
+          <div className="text-left sm:text-right">
+            <p className="text-2xl font-extrabold tracking-[-.06em] text-primary">{data.playerAWins} — {data.playerBWins}</p>
+            <p className="text-xs text-muted-foreground">{data.totalMeetings} {data.totalMeetings === 1 ? 'meeting' : 'meetings'}</p>
+          </div>
+        )}
+      </div>
+      {data.totalMeetings === 0 ? (
+        <div className="mt-6 rounded-2xl border border-dashed border-border bg-background/20 p-8 text-center text-sm text-muted-foreground" data-testid="h2h-empty">
+          No previous meetings found.
+        </div>
+      ) : (
+        <>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-card-border bg-card/70 p-4">
+              <p className="text-sm font-bold">{playerAName}</p>
+              <p className="mt-2 text-2xl font-extrabold text-primary">{data.playerAWinPercentage}%</p>
+              <p className="text-xs text-muted-foreground">{data.playerAWins} wins</p>
+            </div>
+            <div className="rounded-2xl border border-card-border bg-card/70 p-4">
+              <p className="text-sm font-bold">{playerBName}</p>
+              <p className="mt-2 text-2xl font-extrabold text-primary">{data.playerBWinPercentage}%</p>
+              <p className="text-xs text-muted-foreground">{data.playerBWins} wins</p>
+            </div>
+          </div>
+          {data.surfaceBreakdown.length > 0 && (
+            <div className="mt-6">
+              <p className="mono-label text-muted-foreground">By surface</p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                {data.surfaceBreakdown.map((surface) => (
+                  <div key={surface.surface} className="rounded-xl border border-card-border bg-card/55 px-3 py-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-bold">{surface.surface}</span>
+                      <span className="font-mono text-xs text-primary">{surface.playerAWins} — {surface.playerBWins}</span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-muted-foreground">{surface.totalMeetings} {surface.totalMeetings === 1 ? 'meeting' : 'meetings'}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="mt-6">
+            <p className="mono-label text-muted-foreground">Recent meetings</p>
+            <div className="mt-3 space-y-2">
+              {data.recentMeetings.map((meeting) => {
+                const winner = meeting.winnerId === meeting.playerA.id ? meeting.playerA.name : meeting.winnerId === meeting.playerB.id ? meeting.playerB.name : 'Winner unavailable';
+                return (
+                  <div key={meeting.id} className="rounded-2xl border border-card-border bg-card/55 p-4" data-testid={`h2h-meeting-${meeting.id}`}>
+                    <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+                      <div>
+                        <p className="text-sm font-bold">{meeting.playerA.name} <span className="text-muted-foreground">vs</span> {meeting.playerB.name}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{formatDate(meeting.date, 'date')} · {meeting.tournamentName} · {meeting.surface}</p>
+                      </div>
+                      <div className="text-left sm:text-right">
+                        <p className="text-xs font-bold text-primary">Winner: {winner}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{meeting.resultSummary ?? 'Score unavailable'}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
+    </section>
+  );
 }
 
 function InfoStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {

@@ -18,6 +18,7 @@ import type {
 import type {
   Dashboard,
   GetDashboardParams,
+  HeadToHead,
   HealthStatus,
   ListMatchesParams,
   Match,
@@ -445,6 +446,83 @@ export function useGetMatch<TData = Awaited<ReturnType<typeof getMatch>>, TError
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetMatchQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetMatchH2hUrl = (id: number,) => {
+
+
+
+
+  return `/api/matches/${id}/h2h`
+}
+
+/**
+ * @summary Get dynamic pre-match head-to-head statistics
+ */
+export const getMatchH2h = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<HeadToHead> => {
+
+  return customFetch<HeadToHead>(getGetMatchH2hUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMatchH2hQueryKey = (id: number,) => {
+    return [
+    `/api/matches/${id}/h2h`
+    ] as const;
+    }
+
+
+export const getGetMatchH2hQueryOptions = <TData = Awaited<ReturnType<typeof getMatchH2h>>, TError = ErrorType<NotFoundResponse>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMatchH2h>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMatchH2hQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMatchH2h>>> = ({ signal }) => getMatchH2h(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMatchH2h>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMatchH2hQueryResult = NonNullable<Awaited<ReturnType<typeof getMatchH2h>>>
+export type GetMatchH2hQueryError = ErrorType<NotFoundResponse>
+
+
+/**
+ * @summary Get dynamic pre-match head-to-head statistics
+ */
+
+export function useGetMatchH2h<TData = Awaited<ReturnType<typeof getMatchH2h>>, TError = ErrorType<NotFoundResponse>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMatchH2h>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMatchH2hQueryOptions(id,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

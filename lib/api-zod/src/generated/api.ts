@@ -267,8 +267,96 @@ export const GetMatchResponse = zod.object({
   "surface": zod.string(),
   "category": zod.string(),
   "season": zod.number()
+}),
+  "headToHead": zod.object({
+  "totalMeetings": zod.number(),
+  "playerAWins": zod.number(),
+  "playerBWins": zod.number(),
+  "playerAWinPercentage": zod.number(),
+  "playerBWinPercentage": zod.number(),
+  "matchesBeforeScheduledTime": zod.number(),
+  "surfaceBreakdown": zod.array(zod.object({
+  "surface": zod.string(),
+  "totalMeetings": zod.number(),
+  "playerAWins": zod.number(),
+  "playerBWins": zod.number(),
+  "playerAWinPercentage": zod.number(),
+  "playerBWinPercentage": zod.number()
+})),
+  "recentMeetings": zod.array(zod.object({
+  "id": zod.number(),
+  "date": zod.coerce.date(),
+  "tournamentName": zod.string(),
+  "surface": zod.string(),
+  "playerA": zod.object({
+  "id": zod.number(),
+  "sportId": zod.number(),
+  "name": zod.string(),
+  "country": zod.string(),
+  "currentRanking": zod.number().nullish()
+}),
+  "playerB": zod.object({
+  "id": zod.number(),
+  "sportId": zod.number(),
+  "name": zod.string(),
+  "country": zod.string(),
+  "currentRanking": zod.number().nullish()
+}),
+  "winnerId": zod.number().nullable(),
+  "resultSummary": zod.string().nullable()
+}))
 })
 }))
+
+
+/**
+ * @summary Get dynamic pre-match head-to-head statistics
+ */
+
+
+
+export const GetMatchH2hParams = zod.object({
+  "id": zod.coerce.number().min(1)
+})
+
+export const GetMatchH2hResponse = zod.object({
+  "totalMeetings": zod.number(),
+  "playerAWins": zod.number(),
+  "playerBWins": zod.number(),
+  "playerAWinPercentage": zod.number(),
+  "playerBWinPercentage": zod.number(),
+  "matchesBeforeScheduledTime": zod.number(),
+  "surfaceBreakdown": zod.array(zod.object({
+  "surface": zod.string(),
+  "totalMeetings": zod.number(),
+  "playerAWins": zod.number(),
+  "playerBWins": zod.number(),
+  "playerAWinPercentage": zod.number(),
+  "playerBWinPercentage": zod.number()
+})),
+  "recentMeetings": zod.array(zod.object({
+  "id": zod.number(),
+  "date": zod.coerce.date(),
+  "tournamentName": zod.string(),
+  "surface": zod.string(),
+  "playerA": zod.object({
+  "id": zod.number(),
+  "sportId": zod.number(),
+  "name": zod.string(),
+  "country": zod.string(),
+  "currentRanking": zod.number().nullish()
+}),
+  "playerB": zod.object({
+  "id": zod.number(),
+  "sportId": zod.number(),
+  "name": zod.string(),
+  "country": zod.string(),
+  "currentRanking": zod.number().nullish()
+}),
+  "winnerId": zod.number().nullable(),
+  "resultSummary": zod.string().nullable()
+}))
+})
 
 
 /**

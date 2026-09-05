@@ -1,1 +1,2 @@
 - [OpenAPI and workspace Zod](zod-openapi-compat.md) — keep generated numeric schemas compatible with the workspace's current Zod major until the catalog is upgraded.
+- [Sports data integrity](sports-data-integrity.md) — imported entities need source/external IDs, while H2H and form remain derived from records before the target match time.
