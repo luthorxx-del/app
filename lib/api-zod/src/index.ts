@@ -34,4 +34,3 @@ export type {
   TournamentIdParameter,
 } from "./generated/types";
 export { PlayerFormCurrentStreakType as PlayerFormCurrentStreakTypeValues } from "./generated/types/playerFormCurrentStreakType";
-export * from './generated/types';

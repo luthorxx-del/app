@@ -1,0 +1,8 @@
+{
+  "name": "SportStats",
+  "description": "Mobile-first Tennis statistics platform with live scores, match breakdowns, head-to-head analysis, and player profiles",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
