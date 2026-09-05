@@ -6,9 +6,16 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './beforeDateParameter';
 export * from './dashboard';
 export * from './error';
+export * from './formResult';
+export * from './formResultResult';
+export * from './formSurface';
+export * from './formWindow';
+export * from './formWindowPatternItem';
 export * from './getDashboardParams';
+export * from './getPlayerFormParams';
 export * from './headToHead';
 export * from './headToHeadMatch';
 export * from './headToHeadSurface';
@@ -21,11 +28,14 @@ export * from './matchStatus';
 export * from './notFoundResponse';
 export * from './player';
 export * from './playerDetail';
+export * from './playerForm';
+export * from './playerFormCurrentStreakType';
 export * from './playerIdParameter';
 export * from './searchParams';
 export * from './searchResults';
 export * from './sport';
 export * from './sportIdParameter';
+export * from './surfaceParameter';
 export * from './tournament';
 export * from './tournamentDetail';
 export * from './tournamentIdParameter';

@@ -1,4 +1,16 @@
-import { and, asc, desc, eq, ilike, inArray, lt, or, sql, type SQL } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  isNotNull,
+  lt,
+  or,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import {
   GetDashboardQueryParams,
@@ -6,6 +18,8 @@ import {
   GetMatchParams,
   GetMatchResponse,
   GetPlayerParams,
+  GetPlayerFormQueryParams,
+  GetPlayerFormResponse,
   GetPlayerResponse,
   GetTournamentParams,
   GetTournamentResponse,
@@ -251,6 +265,138 @@ async function calculateHeadToHead(match: H2HTarget) {
   };
 }
 
+type FormTarget = {
+  playerId: number;
+  sportId: number;
+  before?: Date;
+  surface?: string;
+};
+
+function summarizeForm(results: Array<{ result: "W" | "L" }>, window: number) {
+  const windowResults = results.slice(0, window);
+  const wins = windowResults.filter((result) => result.result === "W").length;
+  const losses = windowResults.length - wins;
+  return {
+    window,
+    availableMatches: windowResults.length,
+    wins,
+    losses,
+    winPercentage: winPercentage(wins, windowResults.length),
+    pattern: windowResults.map((result) => result.result),
+  };
+}
+
+async function calculatePlayerForm(target: FormTarget) {
+  const cutoff = target.before ?? new Date();
+  const conditions: SQL[] = [
+    eq(matchesTable.sportId, target.sportId),
+    eq(matchesTable.status, "completed"),
+    isNotNull(matchesTable.winnerId),
+    lt(matchesTable.date, cutoff),
+    or(
+      eq(matchesTable.playerAId, target.playerId),
+      eq(matchesTable.playerBId, target.playerId),
+    )!,
+  ];
+
+  if (target.surface) {
+    conditions.push(eq(tournamentsTable.surface, target.surface));
+  }
+
+  const rows = await db
+    .select({
+      id: matchesTable.id,
+      date: matchesTable.date,
+      tournamentName: tournamentsTable.name,
+      surface: tournamentsTable.surface,
+      playerAId: matchesTable.playerAId,
+      playerBId: matchesTable.playerBId,
+      winnerId: matchesTable.winnerId,
+      resultSummary: matchesTable.resultSummary,
+      playerA: {
+        id: playerAAlias.id,
+        sportId: playerAAlias.sportId,
+        name: playerAAlias.name,
+        country: playerAAlias.country,
+        currentRanking: playerAAlias.currentRanking,
+      },
+      playerB: {
+        id: playerBAlias.id,
+        sportId: playerBAlias.sportId,
+        name: playerBAlias.name,
+        country: playerBAlias.country,
+        currentRanking: playerBAlias.currentRanking,
+      },
+    })
+    .from(matchesTable)
+    .innerJoin(
+      tournamentsTable,
+      eq(matchesTable.tournamentId, tournamentsTable.id),
+    )
+    .innerJoin(playerAAlias, eq(matchesTable.playerAId, playerAAlias.id))
+    .innerJoin(playerBAlias, eq(matchesTable.playerBId, playerBAlias.id))
+    .where(and(...conditions))
+    .orderBy(desc(matchesTable.date), desc(matchesTable.id))
+    .limit(20);
+
+  const results = rows.map((row) => {
+    const opponent = row.playerAId === target.playerId ? row.playerB : row.playerA;
+    return {
+      id: row.id,
+      date: row.date,
+      tournamentName: row.tournamentName,
+      surface: row.surface,
+      opponent,
+      result: row.winnerId === target.playerId ? ("W" as const) : ("L" as const),
+      winnerId: row.winnerId!,
+      resultSummary: row.resultSummary,
+    };
+  });
+
+  const surfaceMap = new Map<
+    string,
+    { surface: string; availableMatches: number; wins: number; losses: number }
+  >();
+  for (const result of results) {
+    const current = surfaceMap.get(result.surface) ?? {
+      surface: result.surface,
+      availableMatches: 0,
+      wins: 0,
+      losses: 0,
+    };
+    current.availableMatches += 1;
+    if (result.result === "W") current.wins += 1;
+    else current.losses += 1;
+    surfaceMap.set(result.surface, current);
+  }
+
+  const currentStreakType = results[0]?.result ?? null;
+  let currentStreakLength = 0;
+  for (const result of results) {
+    if (result.result !== currentStreakType) break;
+    currentStreakLength += 1;
+  }
+
+  return {
+    asOf: cutoff,
+    last5: summarizeForm(results, 5),
+    last10: summarizeForm(results, 10),
+    last20: summarizeForm(results, 20),
+    currentStreakType,
+    currentStreakLength,
+    results,
+    surfaceBreakdown: Array.from(surfaceMap.values())
+      .map((surface) => ({
+        ...surface,
+        winPercentage: winPercentage(
+          surface.wins,
+          surface.availableMatches,
+        ),
+      }))
+      .sort((a, b) => a.surface.localeCompare(b.surface)),
+  };
+}
+
 async function getMatchDetail(id: number) {
   const match = await fetchMatchById(id);
   if (!match) return undefined;
@@ -261,14 +407,26 @@ async function getMatchDetail(id: number) {
     .where(eq(tournamentsTable.id, match.tournamentId));
   if (!tournament) return undefined;
 
-  const headToHead = await calculateHeadToHead({
-    sportId: match.sportId,
-    playerAId: match.playerA.id,
-    playerBId: match.playerB.id,
-    date: match.date,
-  });
+  const [headToHead, playerAForm, playerBForm] = await Promise.all([
+    calculateHeadToHead({
+      sportId: match.sportId,
+      playerAId: match.playerA.id,
+      playerBId: match.playerB.id,
+      date: match.date,
+    }),
+    calculatePlayerForm({
+      sportId: match.sportId,
+      playerId: match.playerA.id,
+      before: match.date,
+    }),
+    calculatePlayerForm({
+      sportId: match.sportId,
+      playerId: match.playerB.id,
+      before: match.date,
+    }),
+  ]);
 
-  return { ...match, tournament, headToHead };
+  return { ...match, tournament, headToHead, playerAForm, playerBForm };
 }
 
 function dayBounds() {
@@ -368,6 +526,35 @@ router.get("/matches/:id/h2h", async (req, res): Promise<void> => {
   }
 
   res.json(detail.headToHead);
+});
+
+router.get("/players/:id/form", async (req, res): Promise<void> => {
+  const parsed = GetPlayerFormQueryParams.safeParse({
+    ...req.query,
+    id: req.params.id,
+  });
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [player] = await db
+    .select()
+    .from(playersTable)
+    .where(eq(playersTable.id, parsed.data.id));
+  if (!player) {
+    res.status(404).json({ error: "Player not found" });
+    return;
+  }
+
+  const form = await calculatePlayerForm({
+    playerId: player.id,
+    sportId: player.sportId,
+    before: parsed.data.before,
+    surface: parsed.data.surface,
+  });
+
+  res.json(GetPlayerFormResponse.parse(form));
 });
 
 router.get("/players/:id", async (req, res): Promise<void> => {

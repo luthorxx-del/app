@@ -103,9 +103,79 @@ export interface HeadToHead {
   recentMeetings: HeadToHeadMatch[];
 }
 
+export type FormWindowPatternItem = typeof FormWindowPatternItem[keyof typeof FormWindowPatternItem];
+
+
+export const FormWindowPatternItem = {
+  W: 'W',
+  L: 'L',
+} as const;
+
+export interface FormWindow {
+  window: number;
+  availableMatches: number;
+  wins: number;
+  losses: number;
+  winPercentage: number;
+  pattern: FormWindowPatternItem[];
+}
+
+/**
+ * @nullable
+ */
+export type PlayerFormCurrentStreakType = typeof PlayerFormCurrentStreakType[keyof typeof PlayerFormCurrentStreakType] | null;
+
+
+export const PlayerFormCurrentStreakType = {
+  W: 'W',
+  L: 'L',
+} as const;
+
+export type FormResultResult = typeof FormResultResult[keyof typeof FormResultResult];
+
+
+export const FormResultResult = {
+  W: 'W',
+  L: 'L',
+} as const;
+
+export interface FormResult {
+  id: number;
+  date: string;
+  tournamentName: string;
+  surface: string;
+  opponent: Player;
+  result: FormResultResult;
+  winnerId: number;
+  /** @nullable */
+  resultSummary: string | null;
+}
+
+export interface FormSurface {
+  surface: string;
+  availableMatches: number;
+  wins: number;
+  losses: number;
+  winPercentage: number;
+}
+
+export interface PlayerForm {
+  asOf: string;
+  last5: FormWindow;
+  last10: FormWindow;
+  last20: FormWindow;
+  /** @nullable */
+  currentStreakType: PlayerFormCurrentStreakType;
+  currentStreakLength: number;
+  results: FormResult[];
+  surfaceBreakdown: FormSurface[];
+}
+
 export type MatchDetail = Match & {
   tournament: Tournament;
   headToHead: HeadToHead;
+  playerAForm: PlayerForm;
+  playerBForm: PlayerForm;
 };
 
 export interface Dashboard {
@@ -147,6 +217,13 @@ export type TournamentIdParameter = number;
 
 export type PlayerIdParameter = number;
 
+/**
+ * Only include completed matches before this timestamp.
+ */
+export type BeforeDateParameter = string;
+
+export type SurfaceParameter = string;
+
 export type GetDashboardParams = {
 /**
  * @minimum 1
@@ -168,6 +245,14 @@ tournamentId?: TournamentIdParameter;
  */
 playerId?: PlayerIdParameter;
 status?: MatchStatus;
+};
+
+export type GetPlayerFormParams = {
+/**
+ * Only include completed matches before this timestamp.
+ */
+before?: BeforeDateParameter;
+surface?: SurfaceParameter;
 };
 
 export type SearchParams = {

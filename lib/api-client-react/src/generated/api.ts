@@ -18,6 +18,7 @@ import type {
 import type {
   Dashboard,
   GetDashboardParams,
+  GetPlayerFormParams,
   HeadToHead,
   HealthStatus,
   ListMatchesParams,
@@ -25,6 +26,7 @@ import type {
   MatchDetail,
   NotFoundResponse,
   PlayerDetail,
+  PlayerForm,
   SearchParams,
   SearchResults,
   Sport,
@@ -600,6 +602,95 @@ export function useGetPlayer<TData = Awaited<ReturnType<typeof getPlayer>>, TErr
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetPlayerQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetPlayerFormUrl = (id: number,
+    params?: GetPlayerFormParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/players/${id}/form?${stringifiedParams}` : `/api/players/${id}/form`
+}
+
+/**
+ * @summary Get dynamic player form before an optional cutoff
+ */
+export const getPlayerForm = async (id: number,
+    params?: GetPlayerFormParams, options?: Parameters<typeof customFetch>[1]): Promise<PlayerForm> => {
+
+  return customFetch<PlayerForm>(getGetPlayerFormUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPlayerFormQueryKey = (id: number,
+    params?: GetPlayerFormParams,) => {
+    return [
+    `/api/players/${id}/form`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetPlayerFormQueryOptions = <TData = Awaited<ReturnType<typeof getPlayerForm>>, TError = ErrorType<NotFoundResponse>>(id: number,
+    params?: GetPlayerFormParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlayerForm>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPlayerFormQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPlayerForm>>> = ({ signal }) => getPlayerForm(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPlayerForm>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPlayerFormQueryResult = NonNullable<Awaited<ReturnType<typeof getPlayerForm>>>
+export type GetPlayerFormQueryError = ErrorType<NotFoundResponse>
+
+
+/**
+ * @summary Get dynamic player form before an optional cutoff
+ */
+
+export function useGetPlayerForm<TData = Awaited<ReturnType<typeof getPlayerForm>>, TError = ErrorType<NotFoundResponse>>(
+ id: number,
+    params?: GetPlayerFormParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlayerForm>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPlayerFormQueryOptions(id,params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

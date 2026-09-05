@@ -7,9 +7,12 @@
  */
 import type { HeadToHead } from './headToHead';
 import type { Match } from './match';
+import type { PlayerForm } from './playerForm';
 import type { Tournament } from './tournament';
 
 export type MatchDetail = Match & {
   tournament: Tournament;
   headToHead: HeadToHead;
+  playerAForm: PlayerForm;
+  playerBForm: PlayerForm;
 };

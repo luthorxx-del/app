@@ -132,6 +132,24 @@ paths:
                 $ref: "#/components/schemas/PlayerDetail"
         "404":
           $ref: "#/components/responses/NotFound"
+  /players/{id}/form:
+    get:
+      operationId: getPlayerForm
+      tags: [players]
+      summary: Get dynamic player form before an optional cutoff
+      parameters:
+        - $ref: "#/components/parameters/PlayerPathId"
+        - $ref: "#/components/parameters/BeforeDate"
+        - $ref: "#/components/parameters/Surface"
+      responses:
+        "200":
+          description: Player form windows and recent completed results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerForm"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /tournaments/{id}:
     get:
       operationId: getTournament
@@ -209,6 +227,20 @@ components:
       schema:
         type: number
         minimum: 1
+    BeforeDate:
+      name: before
+      in: query
+      required: false
+      description: Only include completed matches before this timestamp.
+      schema:
+        type: string
+        format: date-time
+    Surface:
+      name: surface
+      in: query
+      required: false
+      schema:
+        type: string
   responses:
     NotFound:
       description: Resource not found
@@ -297,12 +329,16 @@ components:
       allOf:
         - $ref: "#/components/schemas/Match"
         - type: object
-          required: [tournament, headToHead]
+          required: [tournament, headToHead, playerAForm, playerBForm]
           properties:
             tournament:
               $ref: "#/components/schemas/Tournament"
             headToHead:
               $ref: "#/components/schemas/HeadToHead"
+            playerAForm:
+              $ref: "#/components/schemas/PlayerForm"
+            playerBForm:
+              $ref: "#/components/schemas/PlayerForm"
     HeadToHead:
       type: object
       required:
@@ -348,6 +384,67 @@ components:
           type: [number, "null"]
         resultSummary:
           type: [string, "null"]
+    PlayerForm:
+      type: object
+      required: [asOf, last5, last10, last20, currentStreakType, currentStreakLength, results, surfaceBreakdown]
+      properties:
+        asOf: { type: string, format: date-time }
+        last5:
+          $ref: "#/components/schemas/FormWindow"
+        last10:
+          $ref: "#/components/schemas/FormWindow"
+        last20:
+          $ref: "#/components/schemas/FormWindow"
+        currentStreakType:
+          type: [string, "null"]
+          enum: [W, L, null]
+        currentStreakLength: { type: number }
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormResult"
+        surfaceBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormSurface"
+    FormWindow:
+      type: object
+      required: [window, availableMatches, wins, losses, winPercentage, pattern]
+      properties:
+        window: { type: number }
+        availableMatches: { type: number }
+        wins: { type: number }
+        losses: { type: number }
+        winPercentage: { type: number }
+        pattern:
+          type: array
+          items:
+            type: string
+            enum: [W, L]
+    FormResult:
+      type: object
+      required: [id, date, tournamentName, surface, opponent, result, winnerId, resultSummary]
+      properties:
+        id: { type: number }
+        date: { type: string, format: date-time }
+        tournamentName: { type: string }
+        surface: { type: string }
+        opponent:
+          $ref: "#/components/schemas/Player"
+        result:
+          type: string
+          enum: [W, L]
+        winnerId: { type: number }
+        resultSummary: { type: [string, "null"] }
+    FormSurface:
+      type: object
+      required: [surface, availableMatches, wins, losses, winPercentage]
+      properties:
+        surface: { type: string }
+        availableMatches: { type: number }
+        wins: { type: number }
+        losses: { type: number }
+        winPercentage: { type: number }
     Dashboard:
       type: object
       required: [sport, today, live, upcoming, completed]

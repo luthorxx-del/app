@@ -305,6 +305,110 @@ export const GetMatchResponse = zod.object({
   "winnerId": zod.number().nullable(),
   "resultSummary": zod.string().nullable()
 }))
+}),
+  "playerAForm": zod.object({
+  "asOf": zod.coerce.date(),
+  "last5": zod.object({
+  "window": zod.number(),
+  "availableMatches": zod.number(),
+  "wins": zod.number(),
+  "losses": zod.number(),
+  "winPercentage": zod.number(),
+  "pattern": zod.array(zod.enum(['W', 'L']))
+}),
+  "last10": zod.object({
+  "window": zod.number(),
+  "availableMatches": zod.number(),
+  "wins": zod.number(),
+  "losses": zod.number(),
+  "winPercentage": zod.number(),
+  "pattern": zod.array(zod.enum(['W', 'L']))
+}),
+  "last20": zod.object({
+  "window": zod.number(),
+  "availableMatches": zod.number(),
+  "wins": zod.number(),
+  "losses": zod.number(),
+  "winPercentage": zod.number(),
+  "pattern": zod.array(zod.enum(['W', 'L']))
+}),
+  "currentStreakType": zod.union([zod.literal('W'),zod.literal('L'),zod.literal(null)]).nullable(),
+  "currentStreakLength": zod.number(),
+  "results": zod.array(zod.object({
+  "id": zod.number(),
+  "date": zod.coerce.date(),
+  "tournamentName": zod.string(),
+  "surface": zod.string(),
+  "opponent": zod.object({
+  "id": zod.number(),
+  "sportId": zod.number(),
+  "name": zod.string(),
+  "country": zod.string(),
+  "currentRanking": zod.number().nullish()
+}),
+  "result": zod.enum(['W', 'L']),
+  "winnerId": zod.number(),
+  "resultSummary": zod.string().nullable()
+})),
+  "surfaceBreakdown": zod.array(zod.object({
+  "surface": zod.string(),
+  "availableMatches": zod.number(),
+  "wins": zod.number(),
+  "losses": zod.number(),
+  "winPercentage": zod.number()
+}))
+}),
+  "playerBForm": zod.object({
+  "asOf": zod.coerce.date(),
+  "last5": zod.object({
+  "window": zod.number(),
+  "availableMatches": zod.number(),
+  "wins": zod.number(),
+  "losses": zod.number(),
+  "winPercentage": zod.number(),
+  "pattern": zod.array(zod.enum(['W', 'L']))
+}),
+  "last10": zod.object({
+  "window": zod.number(),
+  "availableMatches": zod.number(),
+  "wins": zod.number(),
+  "losses": zod.number(),
+  "winPercentage": zod.number(),
+  "pattern": zod.array(zod.enum(['W', 'L']))
+}),
+  "last20": zod.object({
+  "window": zod.number(),
+  "availableMatches": zod.number(),
+  "wins": zod.number(),
+  "losses": zod.number(),
+  "winPercentage": zod.number(),
+  "pattern": zod.array(zod.enum(['W', 'L']))
+}),
+  "currentStreakType": zod.union([zod.literal('W'),zod.literal('L'),zod.literal(null)]).nullable(),
+  "currentStreakLength": zod.number(),
+  "results": zod.array(zod.object({
+  "id": zod.number(),
+  "date": zod.coerce.date(),
+  "tournamentName": zod.string(),
+  "surface": zod.string(),
+  "opponent": zod.object({
+  "id": zod.number(),
+  "sportId": zod.number(),
+  "name": zod.string(),
+  "country": zod.string(),
+  "currentRanking": zod.number().nullish()
+}),
+  "result": zod.enum(['W', 'L']),
+  "winnerId": zod.number(),
+  "resultSummary": zod.string().nullable()
+})),
+  "surfaceBreakdown": zod.array(zod.object({
+  "surface": zod.string(),
+  "availableMatches": zod.number(),
+  "wins": zod.number(),
+  "losses": zod.number(),
+  "winPercentage": zod.number()
+}))
 })
 }))
 
@@ -411,6 +515,75 @@ export const GetPlayerResponse = zod.object({
   "wins": zod.number(),
   "losses": zod.number(),
   "winPercentage": zod.number()
+})
+
+
+/**
+ * @summary Get dynamic player form before an optional cutoff
+ */
+
+
+
+export const GetPlayerFormParams = zod.object({
+  "id": zod.coerce.number().min(1)
+})
+
+export const GetPlayerFormQueryParams = zod.object({
+  "before": zod.date().optional().describe('Only include completed matches before this timestamp.'),
+  "surface": zod.coerce.string().optional()
+})
+
+export const GetPlayerFormResponse = zod.object({
+  "asOf": zod.coerce.date(),
+  "last5": zod.object({
+  "window": zod.number(),
+  "availableMatches": zod.number(),
+  "wins": zod.number(),
+  "losses": zod.number(),
+  "winPercentage": zod.number(),
+  "pattern": zod.array(zod.enum(['W', 'L']))
+}),
+  "last10": zod.object({
+  "window": zod.number(),
+  "availableMatches": zod.number(),
+  "wins": zod.number(),
+  "losses": zod.number(),
+  "winPercentage": zod.number(),
+  "pattern": zod.array(zod.enum(['W', 'L']))
+}),
+  "last20": zod.object({
+  "window": zod.number(),
+  "availableMatches": zod.number(),
+  "wins": zod.number(),
+  "losses": zod.number(),
+  "winPercentage": zod.number(),
+  "pattern": zod.array(zod.enum(['W', 'L']))
+}),
+  "currentStreakType": zod.union([zod.literal('W'),zod.literal('L'),zod.literal(null)]).nullable(),
+  "currentStreakLength": zod.number(),
+  "results": zod.array(zod.object({
+  "id": zod.number(),
+  "date": zod.coerce.date(),
+  "tournamentName": zod.string(),
+  "surface": zod.string(),
+  "opponent": zod.object({
+  "id": zod.number(),
+  "sportId": zod.number(),
+  "name": zod.string(),
+  "country": zod.string(),
+  "currentRanking": zod.number().nullish()
+}),
+  "result": zod.enum(['W', 'L']),
+  "winnerId": zod.number(),
+  "resultSummary": zod.string().nullable()
+})),
+  "surfaceBreakdown": zod.array(zod.object({
+  "surface": zod.string(),
+  "availableMatches": zod.number(),
+  "wins": zod.number(),
+  "losses": zod.number(),
+  "winPercentage": zod.number()
+}))
 })
 
 
